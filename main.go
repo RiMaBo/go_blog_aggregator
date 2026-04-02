@@ -3,24 +3,39 @@ package main
 import (
 	"internal/config"
 
-	"fmt"
+	"log"
+	"os"
 )
+
+type state struct {
+	cfg *config.Config
+}
 
 func main() {
 	cfg, err := config.Read()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalf("Error Reading Config File: %v", err)
 	}
 
-	err = cfg.SetUser("rimabo")
+	programState := &state{
+		cfg: &cfg,
+	}
+
+	cmds := commands{
+		registeredCommands: make(map[string]func(*state, command) error),
+	}
+
+	cmds.register("login", handlerLogin)
+
+	if len(os.Args) < 2 {
+		log.Fatal("Usage: cli <command> [args...]")
+	}
+
+	cmd := os.Args[1]
+	args := os.Args[2:]
+
+	err = cmds.run(programState, command{Name: cmd, Args: args})
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
-
-	cfg, err = config.Read()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(cfg)
 }
