@@ -6,6 +6,11 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"time"
+
+	"internal/database"
+
+	"github.com/google/uuid"
 )
 
 type RSSFeed struct {
@@ -63,6 +68,40 @@ func handlerAgg(s *state, cmd command) error {
 		fmt.Printf("%s (%s) - %s\n", html.UnescapeString(item.Title), html.UnescapeString(item.Link), html.UnescapeString(item.PubDate))
 		fmt.Printf("%s\n\n", html.UnescapeString(item.Description))
 	}
+
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.Args) < 2 {
+		return fmt.Errorf("Usage: %s <name> <url>", cmd.Name)
+	}
+
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("Error Finding User: %v", err)
+	}
+
+	feedname := cmd.Args[0]
+	feedUrl := cmd.Args[1]
+
+	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      feedname,
+		Url:       feedUrl,
+		UserID:    user.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("Error Creating Feed: %v", err)
+	}
+
+	fmt.Println("Feed Created Successfully:")
+	fmt.Printf(" - ID:    %v\n", feed.ID)
+	fmt.Printf(" - Name:  %v\n", feed.Name)
+	fmt.Printf(" - URL:  %v\n", feed.Url)
+	fmt.Printf(" - User ID:  %v\n", feed.UserID)
 
 	return nil
 }
