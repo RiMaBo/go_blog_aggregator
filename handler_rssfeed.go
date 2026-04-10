@@ -97,11 +97,24 @@ func handlerAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("Error Creating Feed: %v", err)
 	}
 
+	feedFollow, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("Error Following Feed: %v", err)
+	}
+
 	fmt.Println("Feed Created Successfully:")
-	fmt.Printf(" - ID:    %v\n", feed.ID)
-	fmt.Printf(" - Name:  %v\n", feed.Name)
-	fmt.Printf(" - URL:  %v\n", feed.Url)
-	fmt.Printf(" - User ID:  %v\n", feed.UserID)
+	fmt.Printf(" - ID:      %v\n", feed.ID)
+	fmt.Printf(" - Name:    %v\n", feed.Name)
+	fmt.Printf(" - URL:     %v\n", feed.Url)
+	fmt.Printf(" - User ID: %v\n", feed.UserID)
+	fmt.Println()
+	fmt.Printf("User %s Now Following Feed '%s'\n", feedFollow.UserName, feedFollow.FeedName)
 
 	return nil
 }
@@ -117,11 +130,16 @@ func handlerListFeeds(s *state, cmd command) error {
 		return nil
 	}
 
-	fmt.Println("List of Feeds:\n")
+	fmt.Printf("Found %d Feed(s):\n", len(feeds))
 	for _, feed := range(feeds) {
-		fmt.Printf("%s: \n", feed.Feedname)
-		fmt.Printf(" - URL: %s\n", feed.Url)
-		fmt.Printf(" - Created By: %s\n\n", feed.Username)
+		user, err := s.db.GetUserById(context.Background(), feed.UserID)
+		if err != nil {
+			return fmt.Errorf("User Not Found: %v", err)
+		}
+
+		fmt.Printf("%s: \n", feed.Name)
+		fmt.Printf(" - URL:        %s\n", feed.Url)
+		fmt.Printf(" - Created By: %s\n\n", user.Name)
 	}
 
 	return nil

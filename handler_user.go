@@ -18,20 +18,20 @@ func handlerLogin(s *state, cmd command) error {
 	username := cmd.Args[0]
 
 	if _, err := s.db.GetUser(context.Background(), username); err != nil {
-		return fmt.Errorf("Couldn't find user: %v", err)
+		return fmt.Errorf("User %s Not Found: %v", username, err)
 	}
 
 	if err := s.cfg.SetUser(username); err != nil {
-		return fmt.Errorf("Couldn't set current user: %v", err)
+		return fmt.Errorf("Error Setting Current User: %v", err)
 	}
 
-	fmt.Println("User switched successfully.")
+	fmt.Println("User Switched Successfully.")
 	return nil
 }
 
 func handlerRegister(s *state, cmd command) error {
 	if len(cmd.Args) < 1 {
-		return fmt.Errorf("Usage %s <name>", cmd.Name)
+		return fmt.Errorf("Usage: %s <name>", cmd.Name)
 	}
 
 	username := cmd.Args[0]
@@ -43,35 +43,35 @@ func handlerRegister(s *state, cmd command) error {
 		Name:      username,
 	})
 	if err != nil {
-		return fmt.Errorf("Couldn't Create User: %v", err)
+		return fmt.Errorf("Error Creating User: %v", err)
 	}
 
 	fmt.Println("User Created Successfully:")
-	fmt.Printf(" - ID:    %v\n", user.ID)
-	fmt.Printf(" - Name:  %v\n", user.Name)
+	fmt.Printf(" - ID:   %v\n", user.ID)
+	fmt.Printf(" - Name: %v\n", user.Name)
 
 	err = s.cfg.SetUser(username)
 	if err != nil {
-		return fmt.Errorf("Couldn't set current user: %v", err)
+		return fmt.Errorf("Error Setting Current User: %v", err)
 	}
 
-	fmt.Println("User switched successfully.")
+	fmt.Println("User Switched Successfully.")
 	return nil
 }
 
 func handlerReset(s *state, cmd command) error {
 	if err := s.db.Reset(context.Background()); err != nil {
-		return fmt.Errorf("Failed to reset users table: %v", err)
+		return fmt.Errorf("Error Resetting Users Table: %v", err)
 	}
 
-	fmt.Println("Users table reset successfully.")
+	fmt.Println("Users Table Reset Successfully.")
 	return nil
 }
 
 func handlerListUsers(s *state, cmd command) error {
 	users, err := s.db.GetUsers(context.Background())
 	if err != nil {
-		return fmt.Errorf("Couldn't list users: %v", err)
+		return fmt.Errorf("Error Listing Users: %v", err)
 	}
 
 	for _, usr := range users {
