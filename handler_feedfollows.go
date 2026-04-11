@@ -11,7 +11,7 @@ import (
 )
 
 
-func handlerFollowFeed(s *state, cmd command) error {
+func handlerFollowFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) < 1 {
 		return fmt.Errorf("Usage: %s <url>", cmd.Name)
 	}
@@ -21,11 +21,6 @@ func handlerFollowFeed(s *state, cmd command) error {
 	feed, err := s.db.GetFeedByUrl(context.Background(), feedUrl)
 	if err != nil {
 		return fmt.Errorf("Error Finding Feed %s: %v", feedUrl, err)
-	}
-
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("User %s Not Found: %v", s.cfg.CurrentUserName, err)
 	}
 
 	feedFollow, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
@@ -43,24 +38,17 @@ func handlerFollowFeed(s *state, cmd command) error {
 	return nil
 }
 
-func handlerListFeedFollows(s *state, cmd command) error {
-	username := s.cfg.CurrentUserName
-
-	user, err := s.db.GetUser(context.Background(), username)
-	if err != nil {
-		return fmt.Errorf("Error Finding User %s: %v", username, err)
-	}
-
+func handlerListFeedFollows(s *state, cmd command, user database.User) error {
 	feedFollowsForUser, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
-		return fmt.Errorf("Error Finding Feed Follows for User %s: %v", username, err)
+		return fmt.Errorf("Error Finding Feed Follows for User %s: %v", user.Name, err)
 	}
 
 	if len(feedFollowsForUser) < 1 {
-		fmt.Printf("User %s Not Following Any Feeds.\n", username)
+		fmt.Printf("User %s Not Following Any Feeds.\n", user.Name)
 	}
 
-	fmt.Printf("User %s Following %d Feed(s):\n", username, len(feedFollowsForUser))
+	fmt.Printf("User %s Following %d Feed(s):\n", user.Name, len(feedFollowsForUser))
 	for _, feedFollow := range feedFollowsForUser {
 		fmt.Printf(" - %s\n", feedFollow.FeedName)
 	}
