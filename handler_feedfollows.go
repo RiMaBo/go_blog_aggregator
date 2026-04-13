@@ -46,6 +46,7 @@ func handlerListFeedFollows(s *state, cmd command, user database.User) error {
 
 	if len(feedFollowsForUser) < 1 {
 		fmt.Printf("User %s Not Following Any Feeds.\n", user.Name)
+		return nil
 	}
 
 	fmt.Printf("User %s Following %d Feed(s):\n", user.Name, len(feedFollowsForUser))
@@ -53,5 +54,28 @@ func handlerListFeedFollows(s *state, cmd command, user database.User) error {
 		fmt.Printf(" - %s\n", feedFollow.FeedName)
 	}
 
+	return nil
+}
+
+func handlerUnfollowFeed(s *state, cmd command, user database.User) error {
+	if len(cmd.Args) < 1 {
+		return fmt.Errorf("Usage: %s <url>", cmd.Name)
+	}
+
+	feedUrl := cmd.Args[0]
+
+	feed, err := s.db.GetFeedByUrl(context.Background(), feedUrl)
+	if err != nil {
+		return fmt.Errorf("Error Finding Feed %s: %v", feedUrl, err)
+	}
+
+	if err := s.db.DeleteFeedFollowsForUser(context.Background(), database.DeleteFeedFollowsForUserParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	}); err != nil {
+		return fmt.Errorf("Error Unfollowing Feed: %v", err)
+	}
+
+	fmt.Printf("User %s Has Unfollowed Feed '%s'\n", user.Name, feed.Url)
 	return nil
 }

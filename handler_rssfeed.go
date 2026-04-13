@@ -53,20 +53,44 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &rssFeed, nil
 }
 
-func handlerAgg(s *state, cmd command) error {
-	feedURL := "https://www.wagslane.dev/index.xml"
-
-	rssFeed, err := fetchFeed(context.Background(), feedURL)
+func scrapeFeeds(s *state) error {
+	feed, err := s.db.GetNextFeedToFetch(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("Error Finding Next Feed to Fetch: %v", err)
 	}
 
-	fmt.Printf("%s (%s)\n", html.UnescapeString(rssFeed.Channel.Title), html.UnescapeString(rssFeed.Channel.Link))
-	fmt.Printf("%s\n\n", html.UnescapeString(rssFeed.Channel.Description))
+	if err := s.db.MarkFeedFetched(context.Background(), feed.ID); err != nil {
+		return fmt.Errorf("Error Marking Feed %s as Fetched: %v", feed.Name, err)
+	}
 
-	for _, item := range(rssFeed.Channel.Item) {
-		fmt.Printf("%s (%s) - %s\n", html.UnescapeString(item.Title), html.UnescapeString(item.Link), html.UnescapeString(item.PubDate))
-		fmt.Printf("%s\n\n", html.UnescapeString(item.Description))
+	rssfeed, err := fetchFeed(context.Background(), feed.Url)
+	if err != nil {
+		return fmt.Errorf("Error Fetching Feed %s: %v", feed.Name, err)
+	}
+
+	fmt.Printf("%s - %d Posts Found:\n", rssfeed.Channel.Title, len(rssfeed.Channel.Item))
+	for _, rssfeedItem := range rssfeed.Channel.Item {
+		fmt.Printf("%s\n", html.UnescapeString(rssfeedItem.Title))
+	}
+	fmt.Println("")
+
+	return nil
+}
+
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.Args) < 1 {
+		return fmt.Errorf("Usage: %s <time between requests>", cmd.Name)
+	}
+
+	time_between_reqs, err := time.ParseDuration(cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("Error Parsing Time Between Requests")
+	}
+
+	fmt.Printf("Collecting Feeds Every %v\n", time_between_reqs)
+	ticker := time.NewTicker(time_between_reqs)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
 	}
 
 	return nil
