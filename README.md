@@ -1,5 +1,7 @@
 # gator
 
+A multi-user command line tool for aggregating RSS feeds and viewing the posts.
+
 This program requires both Postgres and Go to be installed.
 
 After installing both Postgres and Go, use the following command to install gator:  
