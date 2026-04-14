@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"html"
 	"net/http"
+	"strings"
 	"time"
 
 	"internal/database"
@@ -68,11 +70,31 @@ func scrapeFeeds(s *state) error {
 		return fmt.Errorf("Error Fetching Feed %s: %v", feed.Name, err)
 	}
 
-	fmt.Printf("%s - %d Posts Found:\n", rssfeed.Channel.Title, len(rssfeed.Channel.Item))
 	for _, rssfeedItem := range rssfeed.Channel.Item {
-		fmt.Printf("%s\n", html.UnescapeString(rssfeedItem.Title))
+		publishedAt := sql.NullTime{}
+		if t, err := time.Parse("Mon, 02 Jan 2006 15:04:05 Z0700", rssfeedItem.PubDate); err == nil {
+			publishedAt = sql.NullTime{Time: t, Valid: true}
+		}
+
+
+		_, err = s.db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Title:       sql.NullString{String: html.UnescapeString(rssfeedItem.Title), Valid: true},
+			Url:         rssfeedItem.Link,
+			Description: sql.NullString{String: html.UnescapeString(rssfeedItem.Description), Valid: true},
+			PublishedAt: publishedAt,
+			FeedID:      feed.ID,
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+				continue
+			}
+			fmt.Printf("Unable to Create Post: %v", err)
+			continue
+		}
 	}
-	fmt.Println("")
 
 	return nil
 }
